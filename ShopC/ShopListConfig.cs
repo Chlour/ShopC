@@ -24,7 +24,7 @@ namespace ShopC
                 StringWriter textWriter = new StringWriter();
                 JsonTextWriter jsonWriter = new JsonTextWriter(textWriter)
                 {
-                    Formatting = Formatting.Indented,//格式化缩进
+                    Formatting = Formatting.Indented,
                     Indentation = 4,  //缩进四个字符
                     IndentChar = ' '  //缩进的字符是空格
                 };
