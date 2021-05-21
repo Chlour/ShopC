@@ -45,7 +45,9 @@ namespace ShopC
         [JsonProperty] 
         public int Lotteryprice = 50000;
         [JsonProperty] 
-        public float IronBoxChance= 0.28f;
+        public float WoodenBoxChance= 0.3f;
+        [JsonProperty] 
+        public float IronBoxChance= 0.18f;
         [JsonProperty] 
         public float GoldenBoxChance= 0.0067f;
         [JsonProperty] 

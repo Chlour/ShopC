@@ -122,11 +122,25 @@ namespace ShopC
                         {
                             type = 2336;
                         }
-                        else
-                        {
+                        else if (flag <= ShopListConfig.IronBoxChance + ShopListConfig.ClutterBoxChance +
+                            ShopListConfig.GoldenBoxChance + ShopListConfig.WoodenBoxChance)
+                        { 
                             type = 2334;
                         }
-                        args.Player.GiveItemEX(type, 1, 0);
+                        else
+                        {
+                            type = 0;
+                        }
+
+                        if (type == 0)
+                        {
+                            //没有抽中
+                        }
+                        else
+                        {
+                            args.Player.GiveItemEX(type, 1, 0);
+                        }
+
                     }
                     string s = "购买成功！共花费";
                     if (result[1] != 0)
