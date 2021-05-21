@@ -115,7 +115,7 @@ namespace ShopC
             int platinum_coin = 0;
             //铜币为单位的总数
             int total = 0;
-            //获取买家的货币数量
+            //买家的货币数量
             for (int i = 50; i < 54; i++)
             {
                 if (plr.TPlayer.inventory[i].type == 71)

@@ -192,11 +192,11 @@ namespace ShopC
                 }
                 else if (result[0] == 1)
                 {
-                    args.Player.SendErrorMessage("购买失败!尚不提供此物品");
+                    args.Player.SendErrorMessage("购买失败!本店尚不提供此物品");
                 }
                 else if (result[0] == 2)
                 {
-                    args.Player.SendErrorMessage("购买失败!你拥有的货币不足以购买");
+                    args.Player.SendErrorMessage("购买失败!请确保您有足够的货币");
                 }
             }
         }

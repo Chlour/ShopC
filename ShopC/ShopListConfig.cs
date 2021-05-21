@@ -24,9 +24,10 @@ namespace ShopC
                 StringWriter textWriter = new StringWriter();
                 JsonTextWriter jsonWriter = new JsonTextWriter(textWriter)
                 {
+                    //格式化json
                     Formatting = Formatting.Indented,
-                    Indentation = 4,  //缩进四个字符
-                    IndentChar = ' '  //缩进的字符是空格
+                    Indentation = 4,  
+                    IndentChar = ' '  
                 };
                 serializer.Serialize(jsonWriter, obj);
                 FileTools.CreateIfNot(Path.Combine(TShock.SavePath, "ShopList.json"), textWriter.ToString());
