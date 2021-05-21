@@ -182,6 +182,7 @@ namespace ShopC
         }
         
         
+        
         public static bool DelItemFromInventoryByIndex(this TSPlayer plr,int index,int num)
         {
             var tempnum = 0;

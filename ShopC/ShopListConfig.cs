@@ -38,11 +38,21 @@ namespace ShopC
             }
             catch (Exception ex) { TShock.Log.Error(ex.Message); TShock.Log.ConsoleError("[C/66D093:<ShopC>] 读取配商店列表文件失败."); }
         }
+
+        [JsonProperty] 
+        public bool IsLotteryActive = false;
+        [JsonProperty] 
+        public int Lotteryprice = 50000;
+        [JsonProperty] 
+        public float IronBoxChance= 0.28f;
+        [JsonProperty] 
+        public float GoldenBoxChance= 0.0067f;
+        [JsonProperty] 
+        public float ClutterBoxChance= 0.14f;
         [JsonProperty]
         public string helptext = "列表示例：[{\"type\":\"71\",\"price\":\"50\",\"prefix\":\"0\"},{\"type\":\"72\",\"price\":\"100\",\"prefix\":\"0\"}]";
         public class SellsItem
         {
-            
             public int type= 71;
             public int price = 50;
             public int prefix = 0;
