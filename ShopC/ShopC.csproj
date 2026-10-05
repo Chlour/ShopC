@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>ShopC</AssemblyName>
+    <RootNamespace>ShopC</RootNamespace>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <!-- AssemblyInfo.cs 提供程序集特性，禁止 SDK 自动生成以免重复 -->
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <DebugType>none</DebugType>
+    <NoWarn>CS0618;CS0612;CS0162</NoWarn>
+    <TShockDir>/home/chlour/terraria-server</TShockDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="TShockAPI">
+      <HintPath>$(TShockDir)/ServerPlugins/TShockAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="OTAPI">
+      <HintPath>$(TShockDir)/bin/OTAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="OTAPI.Runtime">
+      <HintPath>$(TShockDir)/bin/OTAPI.Runtime.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="TerrariaServer">
+      <HintPath>$(TShockDir)/bin/TerrariaServer.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="ModFramework">
+      <HintPath>$(TShockDir)/bin/ModFramework.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="HttpServer">
+      <HintPath>$(TShockDir)/bin/HttpServer.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

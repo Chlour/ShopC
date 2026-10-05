@@ -1,4 +1,4 @@
-﻿//代码来源：https://github.com/chi-rei-den/PluginTemplate/blob/master/src/PluginTemplate/Program.cs
+//代码来源：https://github.com/chi-rei-den/PluginTemplate/blob/master/src/PluginTemplate/Program.cs
 
 using System;
 using System.Collections.Generic;
@@ -6,6 +6,7 @@ using System.Reflection;
 using Terraria;
 using TerrariaApi.Server;
 using TShockAPI;
+using TShockAPI.Hooks;
 
 namespace ShopC
 {
@@ -34,62 +35,87 @@ namespace ShopC
         //插件加载时执行的代码
         public override void Initialize()
         {
-            //恋恋给出的模板代码中展示了如何为TShock添加一个指令
             Commands.ChatCommands.Add(new Command(
                 permissions: new List<string> { "chest.shop" },
                 cmd: this.Cmd,
                 "shopc", "hw"));
+
+            // /reload 时重新读取商店列表
+            GeneralHooks.ReloadEvent += ShopListConfig.Load;
+
             ShopListConfig.Load();
         }
 
         //执行指令时对指令进行处理的方法
         private void Cmd(CommandArgs args)
         {
-            Player clientPlayer = args.TPlayer;
-
-
-            if (args.Parameters[0].Equals("help"))
+            //无参数：显示帮助（原版此处 args.Parameters[0] 会越界崩溃）
+            if (args.Parameters.Count == 0 || args.Parameters[0].Equals("help", StringComparison.OrdinalIgnoreCase))
             {
-                args.Player.SendSuccessMessage("欢迎光临!");
-                args.Player.SendSuccessMessage(ShopListConfig.Shoplist[1].type.ToString());
+                args.Player.SendSuccessMessage("欢迎光临! 用法: /shopc <物品ID> <数量> | /shopc list");
+                args.Player.SendSuccessMessage($"本店共有 {ShopListConfig.Shoplist.Count} 种商品，购买时扣除原版货币。");
+                return;
             }
-            else
-            {
-                int type = int.Parse(args.Parameters[0]);
-                int num = int.Parse(args.Parameters[1]);
-                int[] result=args.Player.BuyItemC(ShopListConfig,type, num,0);
-                if (result[0] == 0)
-                {
-                    string s = "购买成功!共花费";
-                    
-                    if (result[1] != 0)
-                    {
-                        s = s + result[1] + "铂金币，";
-                    }
-                    
-                    if (result[2] != 0)
-                    {
-                        s = s + result[2] + "金币，";
-                    }
-                    if (result[3] != 0)
-                    {
-                        s = s + result[3] + "银币，";
-                    }
-                    if (result[4] != 0)
-                    {
-                        s = s + result[4] + "铜币";
-                    }
 
-                    args.Player.SendSuccessMessage(s);
-                }
-                else if (result[0] == 1)
+            //列出全部商品
+            if (args.Parameters[0].Equals("list", StringComparison.OrdinalIgnoreCase))
+            {
+                args.Player.SendSuccessMessage("=== 商品列表 (ID / 单价:铜币) ===");
+                foreach (var item in ShopListConfig.Shoplist)
                 {
-                    args.Player.SendErrorMessage("购买失败!尚不提供此物品");
+                    var it = new Item();
+                    it.SetDefaults(item.Type);
+                    args.Player.SendInfoMessage($"[{item.Type}] {it.Name} - {item.Price} 铜币");
                 }
-                else if (result[0] == 2)
+                return;
+            }
+
+            //参数解析（原版无参数 / 非数字会崩溃）
+            if (!int.TryParse(args.Parameters[0], out int type) || type <= 0)
+            {
+                args.Player.SendErrorMessage("参数错误：请输入物品 ID。用法: /shopc <物品ID> <数量>");
+                return;
+            }
+
+            int num = 1;
+            if (args.Parameters.Count >= 2 && (!int.TryParse(args.Parameters[1], out num) || num <= 0))
+            {
+                args.Player.SendErrorMessage("参数错误：数量必须是正整数。");
+                return;
+            }
+
+            int[] result = args.Player.BuyItemC(ShopListConfig, type, num, 0);
+            if (result[0] == 0)
+            {
+                string s = "购买成功!共花费";
+
+                if (result[1] != 0)
                 {
-                    args.Player.SendErrorMessage("购买失败!你拥有的货币不足以购买");
+                    s = s + result[1] + "铂金币，";
                 }
+
+                if (result[2] != 0)
+                {
+                    s = s + result[2] + "金币，";
+                }
+                if (result[3] != 0)
+                {
+                    s = s + result[3] + "银币，";
+                }
+                if (result[4] != 0)
+                {
+                    s = s + result[4] + "铜币";
+                }
+
+                args.Player.SendSuccessMessage(s);
+            }
+            else if (result[0] == 1)
+            {
+                args.Player.SendErrorMessage("购买失败!尚不提供此物品");
+            }
+            else if (result[0] == 2)
+            {
+                args.Player.SendErrorMessage("购买失败!你拥有的货币不足以购买");
             }
         }
     }
