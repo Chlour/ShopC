@@ -46,7 +46,23 @@ namespace ShopC
             ShopListConfig.Load();
         }
 
-        //执行指令时对指令进行处理的方法
+// 2026-10-05：铜币数 → 可读货币（铂/金/银/铜），让 /shopc list 好看些
+        private static string FormatCoins(long copper)
+        {
+            if (copper <= 0) return "0 铜";
+            long p = copper / 1000000;          // 铂金
+            long g = (copper / 10000) % 100;    // 金
+            long s = (copper / 100) % 100;      // 银
+            long c = copper % 100;              // 铜
+            var sb = new System.Text.StringBuilder();
+            if (p > 0) sb.Append(p).Append(" 铂金 ");
+            if (g > 0) sb.Append(g).Append(" 金 ");
+            if (s > 0) sb.Append(s).Append(" 银 ");
+            if (c > 0) sb.Append(c).Append(" 铜");
+            return sb.ToString().TrimEnd();
+        }
+
+                //执行指令时对指令进行处理的方法
         private void Cmd(CommandArgs args)
         {
             //无参数：显示帮助（原版此处 args.Parameters[0] 会越界崩溃）
@@ -65,7 +81,7 @@ namespace ShopC
                 {
                     var it = new Item();
                     it.SetDefaults(item.Type);
-                    args.Player.SendInfoMessage($"[{item.Type}] {it.Name} - {item.Price} 铜币");
+                    args.Player.SendInfoMessage($"[{item.Type}] {it.Name} - {FormatCoins(item.Price)}");
                 }
                 return;
             }
