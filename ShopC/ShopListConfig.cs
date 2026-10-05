@@ -47,6 +47,37 @@ namespace ShopC
         [JsonPropertyName("shoplist")]
         public List<SellsItem> Shoplist { get; set; } = new List<SellsItem>();
 
+        // 2026-10-05 新增：抽奖配置（权重制 —— 改数字即可调概率，不用重新编译）
+        [JsonPropertyName("lottery")]
+        public LotteryConfig Lottery { get; set; } = new LotteryConfig();
+
+        public class LotteryConfig
+        {
+            [JsonPropertyName("enabled")]
+            public bool Enabled { get; set; } = false;
+
+            [JsonPropertyName("price")]
+            public int Price { get; set; } = 70000;              // 单抽价格（铜）
+
+            [JsonPropertyName("announce")]
+            public bool Announce { get; set; } = true;            // 是否播报中奖结果
+
+            [JsonPropertyName("emptyWeight")]
+            public double EmptyWeight { get; set; } = 37.33;      // 「空手」权重
+
+            [JsonPropertyName("pools")]
+            public List<LotteryEntry> Pools { get; set; } = new List<LotteryEntry>();
+        }
+
+        public class LotteryEntry
+        {
+            [JsonPropertyName("type")]
+            public int Type { get; set; } = 2334;
+
+            [JsonPropertyName("weight")]
+            public double Weight { get; set; } = 1;
+        }
+
         public class SellsItem
         {
             [JsonPropertyName("type")]

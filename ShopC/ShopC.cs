@@ -62,13 +62,30 @@ namespace ShopC
             return sb.ToString().TrimEnd();
         }
 
+                // 权重抽取：命中返回物品 ID，落在空手区返回 0
+        private static int RollLottery(ShopListConfig.LotteryConfig lot, Random rnd)
+        {
+            double total = Math.Max(0, lot.EmptyWeight);
+            foreach (var e in lot.Pools) if (e != null && e.Weight > 0) total += e.Weight;
+            if (total <= 0) return 0;
+
+            double roll = rnd.NextDouble() * total;
+            foreach (var e in lot.Pools)
+            {
+                if (e == null || e.Weight <= 0) continue;
+                if (roll < e.Weight) return e.Type;
+                roll -= e.Weight;
+            }
+            return 0;
+        }
+
                 //执行指令时对指令进行处理的方法
         private void Cmd(CommandArgs args)
         {
             //无参数：显示帮助（原版此处 args.Parameters[0] 会越界崩溃）
             if (args.Parameters.Count == 0 || args.Parameters[0].Equals("help", StringComparison.OrdinalIgnoreCase))
             {
-                args.Player.SendSuccessMessage("欢迎光临! 用法: /shopc <物品ID> <数量> | /shopc list");
+                args.Player.SendSuccessMessage("欢迎光临! 用法: /shopc <物品ID> <数量> | /shopc list | /shopc luck [次数]");
                 args.Player.SendSuccessMessage($"本店共有 {ShopListConfig.Shoplist.Count} 种商品，购买时扣除原版货币。");
                 return;
             }
@@ -87,6 +104,85 @@ namespace ShopC
             }
 
             //参数解析（原版无参数 / 非数字会崩溃）
+            // 抽奖：/shopc luck [次数]
+            if (args.Parameters[0].Equals("luck", StringComparison.OrdinalIgnoreCase))
+            {
+                var lot = ShopListConfig.Lottery;
+                if (lot == null || !lot.Enabled)
+                {
+                    args.Player.SendErrorMessage("抽奖暂未开放。");
+                    return;
+                }
+
+                int draws = 1;                                    // 不传次数默认抽 1 次（原版会越界崩溃）
+                if (args.Parameters.Count >= 2 && !int.TryParse(args.Parameters[1], out draws))
+                {
+                    args.Player.SendErrorMessage("参数错误：用法 /shopc luck [次数]，例如 /shopc luck 10");
+                    return;
+                }
+                if (draws <= 0)
+                {
+                    args.Player.SendErrorMessage("参数错误：次数必须是正整数。");
+                    return;
+                }
+                if (draws > 100) draws = 100;                     // 单次上限保护
+
+                long cost = (long)lot.Price * draws;
+                if (cost > int.MaxValue)
+                {
+                    args.Player.SendErrorMessage("金额过大，请减少次数。");
+                    return;
+                }
+
+                int[] pay = args.Player.TakeMoneyFromPlayer((int)cost);
+                if (pay[0] == 1)
+                {
+                    args.Player.SendErrorMessage($"抽奖失败：{draws} 次需要 {FormatCoins(cost)}，你的货币不足。");
+                    return;
+                }
+
+                var rnd = new Random();
+                var got = new Dictionary<int, int>();
+                int emptyCount = 0;
+                for (int i = 0; i < draws; i++)                   // 逐次发放（原版只发最后一次）
+                {
+                    int t = RollLottery(lot, rnd);
+                    if (t <= 0) { emptyCount++; continue; }
+                    args.Player.GiveItemEX(t, 1, 0);
+                    got[t] = got.TryGetValue(t, out int c) ? c + 1 : 1;
+                }
+
+                if (lot.Announce)
+                {
+                    if (draws == 1)
+                    {
+                        if (got.Count == 0) args.Player.SendInfoMessage("💨 很遗憾，空手而归……");
+                        else foreach (var kv in got)
+                        {
+                            var it = new Item(); it.SetDefaults(kv.Key);
+                            args.Player.SendSuccessMessage($"🎉 恭喜抽中：{it.Name}！");
+                        }
+                    }
+                    else
+                    {
+                        var sb = new System.Text.StringBuilder();
+                        sb.Append($"🎁 抽奖 ×{draws} 结果：");
+                        foreach (var kv in got)
+                        {
+                            var it = new Item(); it.SetDefaults(kv.Key);
+                            sb.Append($"{it.Name} ×{kv.Value}、");
+                        }
+                        sb.Append($"空手 ×{emptyCount}");
+                        args.Player.SendSuccessMessage(sb.ToString());
+                    }
+                }
+                else if (got.Count == 0)
+                {
+                    args.Player.SendInfoMessage("💨 空手而归");
+                }
+                return;
+            }
+
             if (!int.TryParse(args.Parameters[0], out int type) || type <= 0)
             {
                 args.Player.SendErrorMessage("参数错误：请输入物品 ID。用法: /shopc <物品ID> <数量>");
