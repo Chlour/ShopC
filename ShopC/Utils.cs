@@ -11,35 +11,13 @@ namespace ShopC
 {
     static class Utils
     {
-        // 1.4.4+ Item.NewItem 需要一个 IEntitySource 参数。
-        // 1.4.5.x 已移除 EntitySource_Misc，IEntitySource 是空标记接口，这里自定义一个。
-        private sealed class ShopItemSource : IEntitySource { }
-        private static readonly IEntitySource ItemSource = new ShopItemSource();
-
+        // 2026-10-05 修复「买完钱反而变多」：
+        //   旧实现把物品/找零「掉到地上」，并且在 Item.NewItem（它自身已会同步给客户端）之后
+        //   又多发了一次 NetMessage.SendData(90, ...)，客户端可能收到两份 → 捡起来就是双倍货币。
+        //   现统一改为直接放进玩家背包（TShock 的 GiveItem 会处理堆叠上限与放不下的情况）。
         public static void GiveItemEX(this TSPlayer plr, int type, int stack, int prefix)
         {
-            var item = new Item();
-            item.SetDefaults(type);
-            int num = 0;
-
-            while (num < stack)
-            {
-                int itemID;
-                if (stack - num > item.maxStack)
-                {
-                    itemID = Item.NewItem(ItemSource, plr.TPlayer.position, type, item.maxStack,
-                        prefix);
-                    num += item.maxStack;
-                }
-                else
-                {
-                    itemID = Item.NewItem(ItemSource, plr.TPlayer.position, type, stack - num,
-                        prefix);
-                    num = stack;
-                }
-
-                NetMessage.SendData(90, -1, -1, null, itemID, 0);
-            }
+            plr.GiveItem(type, stack, prefix);
         }
 
         public static bool DelItemFromInventory(this TSPlayer plr, int type, int num, int prefix)
@@ -112,72 +90,30 @@ namespace ShopC
         /**
          * 以铜币为单位从背包中扣除金币
          */
+        // 2026-10-05 重写：改用泰拉瑞亚内置扣款 Player.BuyItem(price)
+        //   旧手写逻辑的两个隐患：
+        //     ① 只统计背包槽 50~53 的硬币（硬币放在别的槽就统计不到）
+        //     ② 「先删硬币、再把找零掉到地上」的方式容易与服务端/客户端状态不同步
+        //   现在由游戏内置逻辑处理：扣款、找零、硬币合并全部标准，买完只剩正确余额。
         public static int[] TakeMoneyFromPlayer(this TSPlayer plr, int price)
         {
             int[] result = new int[5];
-            // 原本此处会无条件从背包槽 51 扣掉 10 个物品（金币槽），属于破坏性 bug，已移除
-            int copper_coin = 0;
-            int silver_coin = 0;
-            int gold_coin = 0;
-            int platinum_coin = 0;
-            //铜币为单位的总数
-            int total = 0;
-            //获取买家的货币数量
-            for (int i = 50; i < 54; i++)
+            if (price <= 0)
             {
-                if (plr.TPlayer.inventory[i].type == 71)
-                {
-                    copper_coin = copper_coin + plr.TPlayer.inventory[i].stack;
-                }
-                else if (plr.TPlayer.inventory[i].type == 72)
-                {
-                    silver_coin = silver_coin + plr.TPlayer.inventory[i].stack;
-                }
-                else if (plr.TPlayer.inventory[i].type == 73)
-                {
-                    gold_coin = gold_coin + plr.TPlayer.inventory[i].stack;
-                }
-                else if (plr.TPlayer.inventory[i].type == 74)
-                {
-                    platinum_coin = platinum_coin + plr.TPlayer.inventory[i].stack;
-                }
-            }
-            total = copper_coin + silver_coin * 100 + gold_coin * 10000 + platinum_coin * 1000000;
-
-            if (price > total)
-            {
-                //货币数不够
                 result[0] = 1;
                 return result;
             }
 
-            //采用先删除后添加的方式
-            for (int i = 50; i < 54; i++)
+            if (!plr.TPlayer.BuyItem(price))
             {
-                if (plr.TPlayer.inventory[i] != null)
-                {
-                    plr.DelItemFromInventoryByIndex(i, 1000);
-                }
+                result[0] = 1;   // 货币不足
+                return result;
             }
 
-            total = total - price;
-            int total_p = total / 1000000;
-            int total_g = (total / 10000) % 100;
-            int total_s = (total / 100) % 100;
-            int total_c = total % 100;
-            if (total_p != 0)
-            { plr.GiveItemEX(74, total_p, 0); }
-            if (total_g != 0)
+            // 把可能被改动的背包槽同步给该玩家（硬币可能在任意槽位，找零也会回到背包）
+            for (int i = 0; i < plr.TPlayer.inventory.Length; i++)
             {
-                plr.GiveItemEX(73, total_g, 0);
-            }
-            if (total_s != 0)
-            {
-                plr.GiveItemEX(72, total_s, 0);
-            }
-            if (total_c != 0)
-            {
-                plr.GiveItemEX(71, total_c, 0);
+                plr.SendData(PacketTypes.PlayerSlot, null, plr.Index, i);
             }
 
             result[0] = 0;
