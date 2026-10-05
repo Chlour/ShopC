@@ -35,13 +35,13 @@ namespace ShopC
                         {
                             tempnum += i.stack;
                             i.SetDefaults(0);
-                            plr.SendData(PacketTypes.PlayerSlot, null, plr.Index, slot); //移除玩家背包内的物品
+                            SyncSlot(plr, slot); //移除玩家背包内的物品
                         }
                         else
                         {
                             i.stack -= num - tempnum;
                             tempnum = num;
-                            plr.SendData(PacketTypes.PlayerSlot, null, plr.Index, slot); //移除玩家背包内的物品
+                            SyncSlot(plr, slot); //移除玩家背包内的物品
                         }
                     }
 
@@ -99,6 +99,14 @@ namespace ShopC
         //   ① 统计范围不限 50~53（硬币放哪儿都算得到）
         //   ② 找零直接进背包（不再掉地上、不发重复包）
         //   ③ 关键步骤写日志，便于直接排查
+        // 2026-10-05：统一的槽位同步 —— 用两种方式各发一次，避免客户端收不到导致的"扣了钱又复原"。
+        //   背景：实测服务端已扣款，但玩家重登后客户端旧背包把服务端覆盖回去（客户端权威，SSC 未开启）。
+        private static void SyncSlot(TSPlayer plr, int slot)
+        {
+            try { NetMessage.SendData((int)PacketTypes.PlayerSlot, plr.Index, -1, null, plr.Index, slot); } catch { }
+            try { plr.SendData(PacketTypes.PlayerSlot, "", slot); } catch { }
+        }
+
         public static int[] TakeMoneyFromPlayer(this TSPlayer plr, int price)
         {
             int[] result = new int[5];
@@ -133,7 +141,7 @@ namespace ShopC
                 if (t >= 71 && t <= 74)
                 {
                     inv[i].SetDefaults(0);
-                    plr.SendData(PacketTypes.PlayerSlot, null, plr.Index, i);
+                    SyncSlot(plr, i);
                 }
             }
 
@@ -141,7 +149,19 @@ namespace ShopC
             long change = total - price;
             GiveCoins(plr, change);
 
-            TShock.Log.ConsoleInfo($"[ShopC] {plr.Name} 扣款：原 {total} 铜 - 花费 {price} 铜 = 余 {change} 铜");
+            long after = 0;
+            for (int i = 0; i < inv.Length; i++)
+            {
+                if (inv[i] == null) continue;
+                switch (inv[i].type)
+                {
+                    case 71: after += inv[i].stack; break;
+                    case 72: after += (long)inv[i].stack * 100; break;
+                    case 73: after += (long)inv[i].stack * 10000; break;
+                    case 74: after += (long)inv[i].stack * 1000000; break;
+                }
+            }
+            TShock.Log.ConsoleInfo($"[ShopC] {plr.Name} 扣款：原 {total} 铜 - 花费 {price} 铜 = 余 {change} 铜（服务端复核 {after} 铜）");
 
             result[0] = 0;
             result[1] = price / 1000000;
@@ -172,12 +192,12 @@ namespace ShopC
                     {
                         inv[slot].SetDefaults(type);
                         inv[slot].stack = put;
-                        plr.SendData(PacketTypes.PlayerSlot, null, plr.Index, slot);
+                        SyncSlot(plr, slot);
                     }
                     else if (inv[slot].type == type && inv[slot].stack + put <= 100)
                     {
                         inv[slot].stack += put;
-                        plr.SendData(PacketTypes.PlayerSlot, null, plr.Index, slot);
+                        SyncSlot(plr, slot);
                     }
                     else
                     {
