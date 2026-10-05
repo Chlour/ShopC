@@ -98,7 +98,7 @@ namespace ShopC
                 {
                     var it = new Item();
                     it.SetDefaults(item.Type);
-                    args.Player.SendInfoMessage($"[{item.Type}] {it.Name} - {FormatCoins(item.Price)}");
+                    args.Player.SendInfoMessage($"{(item.HardmodeOnly ? "[困难] " : "")}[{item.Type}] {it.Name} - {FormatCoins(item.Price)}" + (item.HardmodeOnly && !Main.hardMode ? "  （肉山后开放）" : ""));
                 }
                 return;
             }
@@ -196,7 +196,14 @@ namespace ShopC
                 return;
             }
 
-            int[] result = args.Player.BuyItemC(ShopListConfig, type, num, 0);
+            // 困难模式门槛：肉山前买不了困难模式匣子
+var entry = ShopListConfig.Shoplist.Find(x => x.Type == type && x.Prefix == 0);
+if (entry != null && entry.HardmodeOnly && !Main.hardMode)
+{
+    args.Player.SendErrorMessage("该商品为困难模式专属：击败血肉墙（肉山）后才会开放。");
+    return;
+}
+int[] result = args.Player.BuyItemC(ShopListConfig, type, num, 0);
             if (result[0] == 0)
             {
                 string s = "购买成功!共花费";

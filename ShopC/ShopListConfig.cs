@@ -88,6 +88,10 @@ namespace ShopC
 
             [JsonPropertyName("prefix")]
             public int Prefix { get; set; } = 0;
+
+            // 2026-10-05：困难模式限定（击败血肉墙后才可购买）
+            [JsonPropertyName("hardmodeOnly")]
+            public bool HardmodeOnly { get; set; } = false;
         }
     }
 }
